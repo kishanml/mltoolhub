@@ -2,7 +2,7 @@
 name = "mltoolhub"
 version = "0.0.3"
 authors = [
-    { "name" = "Your Name", "email" = "your.email@example.com" }
+  { name="Kishan Mishra", email="kishanmldev@gmail.com" },
 ]
 description = "A lightweight toolkit for faster model building."
 readme = "README.md"

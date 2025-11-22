@@ -3,9 +3,13 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-from typing import Union, Optional,Tuple, List
 
-def reduce_memory_usage(dataset : pd.DataFrame, downsample : bool =False, fraction : float = 0.5):
+import warnings
+warnings.filterwarnings('ignore')
+
+from typing import Tuple
+
+def reduce_memory_usage(dataset : pd.DataFrame, *, downsample : bool =False, fraction : float = 0.5):
     
     """
     Reduce memory usage of a dataframe by downcasting numeric columns.
@@ -88,19 +92,6 @@ def get_quick_summary( dataset : pd.DataFrame,\
         # numeric or categorical 
         object_types = _temp.loc[_temp['dtypes']=='object','features'].to_list()
 
-        # check if there are any object features that are actually numeric.
-        numeric_object_cols = []
-        for col in object_types:
-
-            dataset[col] = dataset[col].astype(str).str.strip().replace({'': np.nan})
-            numeric_val = pd.to_numeric(dataset[col], errors="coerce")
-            if numeric_val.notna().mean() >= 0.9:
-                dataset[col] = numeric_val             
-                numeric_object_cols.append(col)
-                
-        object_types = list(set(object_types) - set(numeric_object_cols))
-        _temp.loc[_temp['features'].isin(numeric_object_cols), 'dtypes'] = "modify"
-
         # check if there any numeric features that are actually categorical.
         numeric_types = _temp.loc[(_temp['dtypes']!='object') & (_temp['missing_percentage']<75),'features']
         uniqueness_ratio = dataset[numeric_types].nunique()/observations_len
@@ -135,7 +126,7 @@ def get_quick_summary( dataset : pd.DataFrame,\
     else:
         raise ValueError('Dataset cannot be empty! Please pass a valid dataset.')
 
-def get_summary_plots(dataset : pd.DataFrame, *, max_height : int = 12) -> List[plt.figure]:
+def get_summary_plots(dataset : pd.DataFrame, *, max_dim : int = 12) -> None:
    
     """
     Generate summary plots for a pandas DataFrame to visualize distributions and data characteristics.
@@ -143,16 +134,13 @@ def get_summary_plots(dataset : pd.DataFrame, *, max_height : int = 12) -> List[
     Parameters:
         dataset : pd.DataFrame
             The input DataFrame to visualize.
-        max_height : int, optional, default=12
+        max_dim : int, optional, default=12
             Maximum height for the plots (useful for controlling figure size).
 
-    Returns:
-        list
-            A list of matplotlib.figure  objects corresponding to the generated summary plots.
+    Returns: None
     """
 
     sns.set(style="whitegrid")
-    figs = []
 
     _summary = get_quick_summary(dataset,classify=True)
 
@@ -160,8 +148,8 @@ def get_summary_plots(dataset : pd.DataFrame, *, max_height : int = 12) -> List[
     temp_missing = _summary.loc[_summary['missing_percentage'] != 0,['features', 'missing_count', 'missing_percentage']].sort_values(by='missing_percentage')
 
     if len(temp_missing) > 0:
-        fig_height = min(max_height, 0.45 * len(temp_missing))
-        fig1, ax1 = plt.subplots(figsize=(12, fig_height))
+        fig_height = min(max_dim, 0.45 * len(temp_missing))
+        fig1, ax1 = plt.subplots(figsize=(max_dim, fig_height))
         
         sns.barplot(
             data=temp_missing,
@@ -171,24 +159,12 @@ def get_summary_plots(dataset : pd.DataFrame, *, max_height : int = 12) -> List[
             ax=ax1
         )
 
-        for i, (pct, count) in enumerate(zip(temp_missing['missing_percentage'], temp_missing['missing_count'])):
-            ax1.text(
-                pct + 0.5,
-                i,
-                str(count),
-                va='center',
-                ha='left',
-                fontsize=10,
-                fontweight='bold'
-            )
-
-        ax1.set_xlabel("Missing Percentage (%)", fontsize=14)
+        ax1.set_xlabel("Missing Percentage (%)", fontsize=10)
         ax1.set_ylabel("")
         ax1.invert_yaxis()
 
         fig1.suptitle("Missing Percentage per Feature", fontsize=16, y=1.02)
         fig1.tight_layout()
-        figs.append(fig1)
 
 
     # 2. Histograms of numeric features (with skewness)
@@ -197,7 +173,7 @@ def get_summary_plots(dataset : pd.DataFrame, *, max_height : int = 12) -> List[
     if n > 0:
         cols = 5
         rows = math.ceil(n / cols)
-        fig2, axes2 = plt.subplots(rows, cols, figsize=(max_height, 3*rows) ,dpi=80)
+        fig2, axes2 = plt.subplots(rows, cols, figsize=(max_dim, 3*rows) ,dpi=80)
         axes2 = axes2.flatten()
 
         for i, ax in enumerate(axes2):
@@ -218,7 +194,6 @@ def get_summary_plots(dataset : pd.DataFrame, *, max_height : int = 12) -> List[
                 ax.axis("off")
         fig2.suptitle("Histograms of Numeric Features (Skewness)", fontsize=16, y=1.02)
         fig2.tight_layout()
-        figs.append(fig2)
 
 
     # 3. Boxen plots of numeric features (with kurtosis)
@@ -226,7 +201,7 @@ def get_summary_plots(dataset : pd.DataFrame, *, max_height : int = 12) -> List[
     if n > 0:
         cols = 5
         rows = math.ceil(n / cols)
-        fig3, axes3 = plt.subplots(rows, cols, figsize=(max_height, 3*rows),dpi=80)
+        fig3, axes3 = plt.subplots(rows, cols, figsize=(max_dim, 3*rows),dpi=80)
         axes3 = axes3.flatten()
 
         for i, ax in enumerate(axes3):
@@ -240,7 +215,6 @@ def get_summary_plots(dataset : pd.DataFrame, *, max_height : int = 12) -> List[
                 ax.axis("off")
         fig3.suptitle("Boxen Plots of Numeric Features (Kurtosis)", fontsize=16, y=1.02)
         fig3.tight_layout()
-        figs.append(fig3)
 
 
     # 4. Value counts for categorical features
@@ -249,7 +223,7 @@ def get_summary_plots(dataset : pd.DataFrame, *, max_height : int = 12) -> List[
     if n > 0:
         cols = 3
         rows = math.ceil(n / cols)
-        fig4, axes4 = plt.subplots(rows, cols, figsize=(max_height, 3*rows),dpi=80)
+        fig4, axes4 = plt.subplots(rows, cols, figsize=(max_dim, 3*rows),dpi=80)
         axes4 = axes4.flatten()
 
         for i, ax in enumerate(axes4):
@@ -271,6 +245,4 @@ def get_summary_plots(dataset : pd.DataFrame, *, max_height : int = 12) -> List[
                 ax.axis("off")
         fig4.suptitle("Value Counts for Categorical Features", fontsize=16, y=1.02)
         fig4.tight_layout()
-        figs.append(fig4)
 
-    return figs
