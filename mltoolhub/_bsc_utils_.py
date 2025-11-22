@@ -89,6 +89,20 @@ def get_quick_summary( dataset : pd.DataFrame,\
         # numeric or categorical 
         object_types = _temp.loc[_temp['dtypes']=='object','features'].to_list()
 
+        # check if there are any object features that are actually numeric.
+        numeric_object_cols = []
+        for col in object_types:
+
+            dataset[col] = dataset[col].astype(str).str.strip().replace({'': np.nan})
+            numeric_val = pd.to_numeric(dataset[col], errors="coerce")
+            if numeric_val.notna().mean() >= 0.9:
+                dataset[col] = numeric_val             
+                numeric_object_cols.append(col)
+                
+        object_types = list(set(object_types) - set(numeric_object_cols))
+        _temp.loc[_temp['features'].isin(numeric_object_cols), 'dtypes'] = "float64"
+
+        # check if there any numeric features that are actually categorical.
         numeric_types = _temp.loc[(_temp['dtypes']!='object') & (_temp['missing_percentage']<75),'features']
         uniqueness_ratio = dataset[numeric_types].nunique()/observations_len
         expected_object_types = expected_object_types = uniqueness_ratio[uniqueness_ratio < unique_ratio].index.to_list()
@@ -135,7 +149,7 @@ def get_summary_plots(dataset : pd.DataFrame, *, max_height : int = 12) -> List[
 
     Returns:
         list
-            A list of matplotlib.figure objects corresponding to the generated summary plots.
+            A list of matplotlib.figure  objects corresponding to the generated summary plots.
     """
 
     sns.set(style="whitegrid")
