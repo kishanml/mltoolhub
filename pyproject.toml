@@ -1,6 +1,6 @@
 [project]
 name = "mltoolhub"
-version = "0.0.3"
+version = "0.0.4"
 authors = [
   { name="Kishan Mishra", email="kishanmldev@gmail.com" },
 ]
