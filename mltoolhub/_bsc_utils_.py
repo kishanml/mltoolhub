@@ -3,10 +3,9 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-
 from typing import Union, Optional,Tuple, List
 
-def reduce_memory_usage(dataset : pd.DataFrame, downsample : bool =False, fraction : float =0.5):
+def reduce_memory_usage(dataset : pd.DataFrame, downsample : bool =False, fraction : float = 0.5):
     
     """
     Reduce memory usage of a dataframe by downcasting numeric columns.
