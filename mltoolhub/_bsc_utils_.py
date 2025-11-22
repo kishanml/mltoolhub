@@ -4,17 +4,20 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-from typing import Union, Optional,Tuple
+from typing import Union, Optional,Tuple, List
 
-def reduce_memory_usage(dataset, downsample=False, fraction=0.5):
+def reduce_memory_usage(dataset : pd.DataFrame, downsample : bool =False, fraction : float =0.5):
     
     """
     Reduce memory usage of a dataframe by downcasting numeric columns.
     
     Parameters:
-        dataset (pd.DataFrame): Input dataframe
-        downsample (bool): If True, sample a fraction of rows
-        fraction (float): Fraction of rows to keep if downsampling (0 < fraction <= 1)
+        dataset : pd.DataFrame
+            The input DataFrame .
+        downsample : bool, optional, default=False
+            If True, sample a fraction of rows.
+        fraction : float, optional, default=0.005
+            Fraction of rows to keep if downsampling (0 < fraction <= 1)
         
     Returns:
         pd.DataFrame: Reduced memory dataframe
@@ -51,6 +54,26 @@ def get_quick_summary( dataset : pd.DataFrame,\
                       kurt_range : Tuple[float,float]= (3.0,3.0),
                       classify : bool = False,
                       ) -> pd.DataFrame:
+    """
+    Generate a quick summary of a pandas DataFrame with insights on missing values, 
+    distribution, and outliers.
+    
+    Parameters:
+        dataset : pd.DataFrame
+            The input DataFrame to summarize.
+        unique_ratio : float, optional, default=0.005
+            Threshold ratio of unique values to total rows for flagging a column as 'mostly constant'.
+        distrib_range : tuple of float, optional, default=(-0.3, 0.3)
+            Expected range for the skewness of numerical columns. Columns outside this range may be flagged as skewed.
+        kurt_range : tuple of float, optional, default=(3.0, 3.0)
+            Expected range for the kurtosis of numerical columns. Columns outside this range may be flagged as having unusual tail behavior.
+        classify : bool, optional, default=False
+            If True, attempts to classify columns as 'categorical' or 'numerical' based on their dtype and unique values.
+
+    Returns:
+        pd.DataFrame : dataset summary
+    
+    """
 
     if dataset.size:
 
@@ -99,9 +122,22 @@ def get_quick_summary( dataset : pd.DataFrame,\
     else:
         raise ValueError('Dataset cannot be empty! Please pass a valid dataset.')
 
-def get_summary_plots(dataset : pd.DataFrame, *, max_height : int = 12):
+def get_summary_plots(dataset : pd.DataFrame, *, max_height : int = 12) -> List[plt.figure]:
    
-    
+    """
+    Generate summary plots for a pandas DataFrame to visualize distributions and data characteristics.
+
+    Parameters:
+        dataset : pd.DataFrame
+            The input DataFrame to visualize.
+        max_height : int, optional, default=12
+            Maximum height for the plots (useful for controlling figure size).
+
+    Returns:
+        list
+            A list of matplotlib.figure objects corresponding to the generated summary plots.
+    """
+
     sns.set(style="whitegrid")
     figs = []
 
