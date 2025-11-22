@@ -100,7 +100,7 @@ def get_quick_summary( dataset : pd.DataFrame,\
                 numeric_object_cols.append(col)
                 
         object_types = list(set(object_types) - set(numeric_object_cols))
-        _temp.loc[_temp['features'].isin(numeric_object_cols), 'dtypes'] = "float64"
+        _temp.loc[_temp['features'].isin(numeric_object_cols), 'dtypes'] = "modify"
 
         # check if there any numeric features that are actually categorical.
         numeric_types = _temp.loc[(_temp['dtypes']!='object') & (_temp['missing_percentage']<75),'features']
