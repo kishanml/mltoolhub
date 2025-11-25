@@ -9,59 +9,23 @@ warnings.filterwarnings('ignore')
 
 from typing import Tuple
 
-def reduce_memory_usage(dataset : pd.DataFrame, *, downsample : bool =False, fraction : float = 0.5):
-    
-    """
-    Reduce memory usage of a dataframe by downcasting numeric columns.
-    
-    Parameters:
-        dataset : pd.DataFrame
-            The input DataFrame .
-        downsample : bool, optional, default=False
-            If True, sample a fraction of rows.
-        fraction : float, optional, default=0.005
-            Fraction of rows to keep if downsampling (0 < fraction <= 1)
-        
-    Returns:
-        pd.DataFrame: Reduced memory dataframe
-
-    """
-    
-    df = dataset.copy()
-    
-    if downsample and 0 < fraction < 1:
-        df = df.sample(frac=fraction, random_state=42).reset_index(drop=True)
-    
-    for col in df.select_dtypes(include=['int', 'int64']).columns:
-
-        c_min = df[col].min()
-        c_max = df[col].max()
-        if c_min >= np.iinfo(np.int8).min and c_max <= np.iinfo(np.int8).max:
-            df[col] = df[col].astype(np.int8)
-        elif c_min >= np.iinfo(np.int16).min and c_max <= np.iinfo(np.int16).max:
-            df[col] = df[col].astype(np.int16)
-        elif c_min >= np.iinfo(np.int32).min and c_max <= np.iinfo(np.int32).max:
-            df[col] = df[col].astype(np.int32)
-        else:
-            df[col] = df[col].astype(np.int64) 
-    
-    for col in df.select_dtypes(include=['float', 'float64']).columns:
-        df[col] = df[col].astype(np.float16)
-    
-    return df
+# -------------------------------------------------------------------------
 
 def get_quick_summary( dataset : pd.DataFrame,\
                       *,
                       unique_ratio : float = 0.005,
                       distrib_range : Tuple[float,float] = (-0.3,0.3),
-                      kurt_range : Tuple[float,float]= (3.0,3.0),
+                      kurt_range : Tuple[float,float]= (2.5,3.5),
                       classify : bool = False,
                       ) -> pd.DataFrame:
     """
+    Usage
+    -----
     Generate a quick summary of a pandas DataFrame with insights on missing values, 
     distribution, and outliers.
     
-    Parameters:
+    Parameters
+    ----------
         dataset : pd.DataFrame
             The input DataFrame to summarize.
         unique_ratio : float, optional, default=0.005
@@ -73,10 +37,12 @@ def get_quick_summary( dataset : pd.DataFrame,\
         classify : bool, optional, default=False
             If True, attempts to classify columns as 'categorical' or 'numerical' based on their dtype and unique values.
 
-    Returns:
+    Returns
+    -------
         pd.DataFrame : dataset summary
     
     """
+    _unknown = np.nan
 
     if dataset.size:
 
@@ -89,36 +55,41 @@ def get_quick_summary( dataset : pd.DataFrame,\
         _temp['missing_count'] = _temp['features'].map(missing_values)
         _temp['missing_percentage'] = ( _temp['missing_count']/ observations_len ) * 100
 
-        # numeric or categorical 
-        object_types = _temp.loc[_temp['dtypes']=='object','features'].to_list()
+        # numeric / datetime /categorical features 
+        _num_feats = dataset.select_dtypes(include=np.number).columns.tolist()
+        _dt_feats = dataset.select_dtypes(include=['datetime', 'datetimetz', 'timedelta']).columns.tolist()
+        _obj_feats = dataset.select_dtypes(include=['object', 'category']).columns.tolist()
+
+        valid_numeric_feats = [col for col in _num_feats if col not in _dt_feats]
 
         # check if there any numeric features that are actually categorical.
-        numeric_types = _temp.loc[(_temp['dtypes']!='object') & (_temp['missing_percentage']<75),'features']
-        uniqueness_ratio = dataset[numeric_types].nunique()/observations_len
-        expected_object_types = expected_object_types = uniqueness_ratio[uniqueness_ratio < unique_ratio].index.to_list()
+        numeric_feats_to_validate = _temp.loc[(_temp['features'].isin(valid_numeric_feats)) & (_temp['missing_percentage'] < 75), 'features'].to_list()
+        uniqueness_ratio = dataset[numeric_feats_to_validate].nunique()/observations_len
+        expected_object_feats  = uniqueness_ratio[uniqueness_ratio < unique_ratio].index.to_list()
 
-        categorical_features = object_types + expected_object_types
-        true_numerical_features = dataset.columns.difference(categorical_features).to_list()
-        _temp['nature'] = np.where(_temp['features'].isin(categorical_features),'category','numeric')
+        categorical_features = _obj_feats + expected_object_feats
+        true_numerical_features = [feat for feat in valid_numeric_feats if feat not in expected_object_feats]
+
+        _temp['nature'] = np.where(_temp['features'].isin(categorical_features),'category',np.where(_temp['features'].isin(true_numerical_features),'numeric','datetime'))
 
         # if numeric, distribution
         _skew = dataset[true_numerical_features].skew()
-        _temp['skewness'] = _temp['features'].map(lambda c : _skew[c] if c in _skew else None)
+        _temp['skewness'] = _temp['features'].map(lambda c : _skew[c] if c in _skew else _unknown)
         if classify:
-            classify_skew = lambda val : "right-skewed" if val> distrib_range[1] else ("left-skewed" if val< distrib_range[0] else "normal")
+            classify_skew = lambda val : "right-skewed" if val> distrib_range[1] else ("left-skewed" if val< distrib_range[0] else ("normal" if distrib_range[0]<val<distrib_range[1] else _unknown))
             _temp['skew_type'] = _temp['skewness'].apply(classify_skew)
 
         # if numeric, outlier presence
         _kurt = dataset[true_numerical_features].kurt()
-        _temp['kurtosis'] = _temp['features'].map(lambda c : _kurt[c] if c in _skew else None)
+        _temp['kurtosis'] = _temp['features'].map(lambda c : _kurt[c] if c in _skew else _unknown)
 
         if classify:
-            classify_kurt = lambda val : "lepto" if val > kurt_range[1] else ("platy" if val< kurt_range[0] else "meso")
+            classify_kurt = lambda val : "lepto" if val > kurt_range[1] else ("platy" if val< kurt_range[0]  else ("meso" if kurt_range[0]<val<kurt_range[1] else _unknown))
             _temp['kurt_type'] = _temp['kurtosis'].apply(classify_kurt)
 
         # if categorical, counts
         unique_counts = dataset.nunique()
-        _temp["no_of_classes"] = _temp["features"].map(lambda c: unique_counts[c] if c in categorical_features else None)
+        _temp["no_of_classes"] = _temp["features"].map(lambda c: unique_counts[c] if c in categorical_features else _unknown)
 
         return _temp
     
@@ -126,25 +97,30 @@ def get_quick_summary( dataset : pd.DataFrame,\
     else:
         raise ValueError('Dataset cannot be empty! Please pass a valid dataset.')
 
-def get_summary_plots(dataset : pd.DataFrame, *, max_dim : int = 12) -> None:
+def get_summary_plots(dataset : pd.DataFrame, *, max_dim : int = 12, sample_frac : float = 0.5) -> None:
    
     """
+    Usage
+    -----
     Generate summary plots for a pandas DataFrame to visualize distributions and data characteristics.
 
-    Parameters:
+    Parameters
+    ----------
         dataset : pd.DataFrame
             The input DataFrame to visualize.
         max_dim : int, optional, default=12
             Maximum height for the plots (useful for controlling figure size).
 
-    Returns: None
+    Returns
+    -------
+        None
     """
 
     sns.set(style="whitegrid")
 
-    _summary = get_quick_summary(dataset,classify=True)
+    dataset_sample = dataset.sample(frac=sample_frac).reset_index(drop=True)
+    _summary = get_quick_summary(dataset_sample,classify=True)
 
-    # 1. Missing percentage per feature
     temp_missing = _summary.loc[_summary['missing_percentage'] != 0,['features', 'missing_count', 'missing_percentage']].sort_values(by='missing_percentage')
 
     if len(temp_missing) > 0:
@@ -182,7 +158,7 @@ def get_summary_plots(dataset : pd.DataFrame, *, max_dim : int = 12) -> None:
                 skew_type = temp_numeric.iloc[i, 2]
 
                 sns.histplot(
-                    data=dataset,
+                    data=dataset_sample,
                     x=feature,
                     bins=30,
                     kde=True,
@@ -209,7 +185,7 @@ def get_summary_plots(dataset : pd.DataFrame, *, max_dim : int = 12) -> None:
                 feature = temp_numeric.iloc[i, 0]
                 kurt_type = temp_numeric.iloc[i, -1]
 
-                sns.boxenplot(x=dataset[feature], ax=ax)
+                sns.boxenplot(x=dataset_sample[feature], ax=ax)
                 ax.set_title(f"{feature} ({kurt_type})", fontsize=10)
             else:
                 ax.axis("off")
@@ -231,7 +207,7 @@ def get_summary_plots(dataset : pd.DataFrame, *, max_dim : int = 12) -> None:
                 feature = temp_cat.iloc[i]
 
                 sns.countplot(
-                    data=dataset,
+                    data=dataset_sample,
                     x=feature,
                     ax=ax,
                     palette="Blues_r"
