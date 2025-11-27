@@ -22,7 +22,7 @@ class TERMCOLOR(Enum):
 LOG_FORMAT = "[%(asctime)s] %(levelname)s - %(message)s"
 
 
-class LevelBasedFormatterForConsole(logging.Formatter):
+class LevelBasedFormatter(logging.Formatter):
     COLORS = {
         logging.DEBUG: TERMCOLOR.LIGHT_CYAN.value,
         logging.INFO: TERMCOLOR.LIGHT_GREEN.value,
@@ -74,7 +74,7 @@ def configure(
             
             ch = logging.StreamHandler()
             ch.setLevel(logging.DEBUG)
-            ch.setFormatter(LevelBasedFormatterForConsole(log_format))
+            ch.setFormatter(LevelBasedFormatter(log_format))
 
             __logger__.addHandler(ch)
             __logger__.addHandler(fh)
@@ -125,7 +125,6 @@ def log_warn(*message) -> None:
     try:
         cur_frame = inspect.stack()[-1]
         inspect_info = f"[{cur_frame.filename} : {str(cur_frame.lineno)}] "
-        print(inspect_info)
         final_message = ' '.join([inspect_info + msg for msg in message])
         
         if __logger__ is not None:
@@ -143,7 +142,6 @@ def log_error(*message) -> None:
     try:
         cur_frame = inspect.stack()[-1]
         inspect_info = f"[{cur_frame.filename} : {str(cur_frame.lineno)}] "
-        print(inspect_info)
         final_message = ' '.join([inspect_info + msg for msg in message])
         
         if __logger__ is not None:
@@ -161,7 +159,6 @@ def log_critical(*message) -> None:
     try:
         cur_frame = inspect.stack()[-1]
         inspect_info = f"[{cur_frame.filename} : {str(cur_frame.lineno)}] "
-        print(inspect_info)
         final_message = ' '.join([inspect_info + msg for msg in message])
         
         if __logger__ is not None:
