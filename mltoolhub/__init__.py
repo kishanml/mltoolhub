@@ -11,6 +11,7 @@ except metadata.PackageNotFoundError:
 
 
 # Basic utils 
-from mltoolhub._bsc_utils_ import get_quick_summary, get_summary_plots
+from mltoolhub.basics import get_quick_summary, get_summary_plots
+import mltoolhub.prologger as prologger
 
-__all__ = ['get_quick_summary', 'get_summary_plots', '__version__']
+__all__ = ['get_quick_summary', 'get_summary_plots', 'prologger', '__version__']
