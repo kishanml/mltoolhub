@@ -7,7 +7,8 @@ from enum import Enum
 import datetime as dt
 from typing import Literal, List, Union
 
-# -------------------------------------------------------------------------
+
+# -----------------------------------PROLOGGER-------------------------------------
 
 
 class TERMCOLOR(Enum):
@@ -46,7 +47,7 @@ __logger__ : logging.Logger = None
 def configure(
     log_filepath: str = f"logs/log_{dt.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log",
     log_format: str = LOG_FORMAT,
-    handler_type : Literal["file", "rotate"] = "file",
+    handler_type : Literal["file", "rotate",None] = None,
     rotation_handler_config : List[Union[float,float]] = [2**13,2**13]):
 
     global __logger__
@@ -61,23 +62,27 @@ def configure(
             __logger__ = logging.getLogger('root')
             __logger__.setLevel(logging.DEBUG) 
 
-            if handler_type == "file":
-                fh = logging.FileHandler(log_filepath,mode='a')
-                fh.setLevel(logging.DEBUG)
+            if handler_type is not None:
 
-            elif handler_type == "rotate":
-                fh = logging.handlers.RotatingFileHandler(log_filepath,*rotation_handler_config)
-                fh.setLevel(logging.DEBUG)
+                if  handler_type == "file":
+                    fh = logging.FileHandler(log_filepath,mode='a')
+                    fh.setLevel(logging.DEBUG)
 
-            else:
-                raise ValueError('handler_type should be file or rotate.')
-            
+                elif handler_type == "rotate":
+                    fh = logging.handlers.RotatingFileHandler(log_filepath,*rotation_handler_config)
+                    fh.setLevel(logging.DEBUG)
+
+                else:
+                    raise ValueError('handler_type should be file or rotate.')
+                
+                __logger__.addHandler(fh)
+                
             ch = logging.StreamHandler()
             ch.setLevel(logging.DEBUG)
             ch.setFormatter(LevelBasedFormatter(log_format))
 
             __logger__.addHandler(ch)
-            __logger__.addHandler(fh)
+            
     
     except Exception as exc : 
         raise Exception(f'Error occured while configuring Logger : {exc}\n{traceback.format_exc()}')

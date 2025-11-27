@@ -9,7 +9,7 @@ warnings.filterwarnings('ignore')
 
 from typing import Tuple
 
-# -------------------------------------------------------------------------
+# -----------------------------------BASICS-------------------------------------
 
 def get_quick_summary( dataset : pd.DataFrame,\
                       *,
