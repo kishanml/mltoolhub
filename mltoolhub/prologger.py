@@ -47,15 +47,16 @@ __logger__ : logging.Logger = None
 def configure(
     log_filepath: str = f"logs/log_{dt.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log",
     log_format: str = LOG_FORMAT,
-    handler_type : Literal["file", "rotate",None] = None,
+    handler_type : Literal["file", "rotate", None] = None,
     rotation_handler_config : List[Union[float,float]] = [2**13,2**13]):
 
     global __logger__
 
     try:
-        log_dir = os.path.dirname(log_filepath)
-        if log_dir and not os.path.exists(log_dir):
-            os.makedirs(log_dir)
+        if rotation_handler_config is not None:
+            log_dir = os.path.dirname(log_filepath)
+            if log_dir and not os.path.exists(log_dir):
+                os.makedirs(log_dir)
 
         if __logger__ is None:
 
@@ -176,7 +177,7 @@ def log_critical(*message) -> None:
 
 ## decorator
 
-def log_exception(logger: logging.Logger):
+def trace_errors(logger: logging.Logger):
 
     def execute(func):
 
