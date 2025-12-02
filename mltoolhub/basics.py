@@ -43,53 +43,57 @@ def get_quick_summary( dataset : pd.DataFrame,\
     
     """
     _unknown = np.nan
+    _df = dataset.copy()
 
-    if dataset.size:
+    if _df.size:
 
-        observations_len, _  = dataset.shape
+        observations_len, _  = _df.shape
 
-        _temp = dataset.dtypes.reset_index().rename(columns={"index":'features',0:'dtypes'})
+        _temp = _df.dtypes.reset_index().rename(columns={"index":'feature',0:'dtype'})
 
         # feature's missing values
-        missing_values = dataset.isna().sum()
-        _temp['missing_count'] = _temp['features'].map(missing_values)
+        missing_values = _df.isna().sum()
+        _temp['missing_count'] = _temp['feature'].map(missing_values)
         _temp['missing_percentage'] = ( _temp['missing_count']/ observations_len ) * 100
 
         # numeric / datetime /categorical features 
-        _num_feats = dataset.select_dtypes(include=np.number).columns.tolist()
-        _dt_feats = dataset.select_dtypes(include=['datetime', 'datetimetz', 'timedelta']).columns.tolist()
-        _obj_feats = dataset.select_dtypes(include=['object', 'category']).columns.tolist()
+        _bool_feats = _df.select_dtypes(include="bool").columns
+        _df[_bool_feats] = _df[_bool_feats].astype(np.int8)
+
+        _num_feats = _df.select_dtypes(include=np.number).columns.tolist()
+        _dt_feats = _df.select_dtypes(include=['datetime', 'datetimetz', 'timedelta']).columns.tolist()
+        _obj_feats = _df.select_dtypes(include=['object', 'category']).columns.tolist()
 
         valid_numeric_feats = [col for col in _num_feats if col not in _dt_feats]
 
         # check if there any numeric features that are actually categorical.
-        numeric_feats_to_validate = _temp.loc[(_temp['features'].isin(valid_numeric_feats)) & (_temp['missing_percentage'] < 75), 'features'].to_list()
-        uniqueness_ratio = dataset[numeric_feats_to_validate].nunique()/observations_len
+        numeric_feats_to_validate = _temp.loc[(_temp['feature'].isin(valid_numeric_feats)) & (_temp['missing_percentage'] < 75), 'feature'].to_list()
+        uniqueness_ratio = _df[numeric_feats_to_validate].nunique()/observations_len
         expected_object_feats  = uniqueness_ratio[uniqueness_ratio < unique_ratio].index.to_list()
 
         categorical_features = _obj_feats + expected_object_feats
         true_numerical_features = [feat for feat in valid_numeric_feats if feat not in expected_object_feats]
 
-        _temp['nature'] = np.where(_temp['features'].isin(categorical_features),'category',np.where(_temp['features'].isin(true_numerical_features),'numeric','datetime'))
+        _temp['nature'] = np.where(_temp['feature'].isin(categorical_features),'category',np.where(_temp['feature'].isin(true_numerical_features),'numeric','datetime'))
 
         # if numeric, distribution
-        _skew = dataset[true_numerical_features].skew()
-        _temp['skewness'] = _temp['features'].map(lambda c : _skew[c] if c in _skew else _unknown)
+        _skew = _df[true_numerical_features].skew()
+        _temp['skewness'] = _temp['feature'].map(lambda c : _skew[c] if c in _skew else _unknown)
         if classify:
             classify_skew = lambda val : "right-skewed" if val> distrib_range[1] else ("left-skewed" if val< distrib_range[0] else ("normal" if distrib_range[0]<val<distrib_range[1] else _unknown))
             _temp['skew_type'] = _temp['skewness'].apply(classify_skew)
 
         # if numeric, outlier presence
-        _kurt = dataset[true_numerical_features].kurt()
-        _temp['kurtosis'] = _temp['features'].map(lambda c : _kurt[c] if c in _skew else _unknown)
+        _kurt = _df[true_numerical_features].kurt()
+        _temp['kurtosis'] = _temp['feature'].map(lambda c : _kurt[c] if c in _skew else _unknown)
 
         if classify:
             classify_kurt = lambda val : "lepto" if val > kurt_range[1] else ("platy" if val< kurt_range[0]  else ("meso" if kurt_range[0]<val<kurt_range[1] else _unknown))
             _temp['kurt_type'] = _temp['kurtosis'].apply(classify_kurt)
 
         # if categorical, counts
-        unique_counts = dataset.nunique()
-        _temp["no_of_classes"] = _temp["features"].map(lambda c: unique_counts[c] if c in categorical_features else _unknown)
+        unique_counts = _df.nunique()
+        _temp["no_of_classes"] = _temp["feature"].map(lambda c: unique_counts[c] if c in categorical_features else _unknown)
 
         return _temp
     
@@ -121,7 +125,7 @@ def get_summary_plots(dataset : pd.DataFrame, *, max_dim : int = 12, sample_frac
     dataset_sample = dataset.sample(frac=sample_frac).reset_index(drop=True)
     _summary = get_quick_summary(dataset_sample,classify=True)
 
-    temp_missing = _summary.loc[_summary['missing_percentage'] != 0,['features', 'missing_count', 'missing_percentage']].sort_values(by='missing_percentage')
+    temp_missing = _summary.loc[_summary['missing_percentage'] != 0,['feature', 'missing_count', 'missing_percentage']].sort_values(by='missing_percentage')
 
     if len(temp_missing) > 0:
         fig_height = min(max_dim, 0.45 * len(temp_missing))
@@ -130,7 +134,7 @@ def get_summary_plots(dataset : pd.DataFrame, *, max_dim : int = 12, sample_frac
         sns.barplot(
             data=temp_missing,
             x='missing_percentage',
-            y='features',
+            y='feature',
             color="#4DA6FF",
             ax=ax1
         )
@@ -144,7 +148,7 @@ def get_summary_plots(dataset : pd.DataFrame, *, max_dim : int = 12, sample_frac
 
 
     # 2. Histograms of numeric features (with skewness)
-    temp_numeric = _summary.loc[_summary['nature'] == 'numeric', ['features', 'skewness', 'skew_type','kurt_type']]
+    temp_numeric = _summary.loc[_summary['nature'] == 'numeric', ['feature', 'skewness', 'skew_type','kurt_type']]
     n = len(temp_numeric)
     if n > 0:
         cols = 5
@@ -194,7 +198,7 @@ def get_summary_plots(dataset : pd.DataFrame, *, max_dim : int = 12, sample_frac
 
 
     # 4. Value counts for categorical features
-    temp_cat = _summary.loc[_summary['nature'] == 'category', 'features']
+    temp_cat = _summary.loc[_summary['nature'] == 'category', 'feature']
     n = len(temp_cat)
     if n > 0:
         cols = 3
