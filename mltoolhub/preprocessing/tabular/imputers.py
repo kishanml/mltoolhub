@@ -21,13 +21,12 @@ class TabImputer:
         
         self._iterations = no_of_iterations
 
-
+        # By default : LightGBM
         LGB_PARAMS =dict(
             device='gpu' if device=='cuda' else device,             
             verbosity=-1
         )
 
-        
         if regressor is None:
             self._regressor = lgb.LGBMRegressor(**LGB_PARAMS)
         else:
@@ -44,6 +43,10 @@ class TabImputer:
 
 
     def stats_impute(self,dataset : pd.DataFrame, summary : pd.DataFrame = None) -> pd.DataFrame:
+
+        """
+            Performs Single Imputation by statistical methods and returns one complete dataset.
+        """
 
         df = dataset.copy()
 
@@ -65,24 +68,29 @@ class TabImputer:
 
     def model_impute(self, dataset : pd.DataFrame, * , max_missing_prcnt : float = 75) -> pd.DataFrame:
 
-        df = dataset.copy()
+        """
+            Performs Single Imputation by Chained Equations (ICE) using provided models and returns one complete dataset.
+        """
 
-        summary = get_quick_summary(df,classify=True)
+        df_original = dataset.copy()
+
+        summary = get_quick_summary(df_original,classify=True)
         high_missing_feats = summary.loc[summary['missing_percentage']>max_missing_prcnt,'feature']
 
         if high_missing_feats.size:
-            df = df.drop(high_missing_feats,axis=1)
-            summary = get_quick_summary(df,classify=True)
+            df_original = df_original.drop(high_missing_feats,axis=1)
+            summary = get_quick_summary(df_original,classify=True)
         
         categorical_features = summary.loc[summary['nature']=='category','feature'].to_list()
         if categorical_features:
             oe = OrdinalEncoder(handle_unknown='use_encoded_value',unknown_value=np.nan)
-            df[categorical_features] = oe.fit_transform(df[categorical_features])
+            df_original[categorical_features] = oe.fit_transform(df_original[categorical_features])
             self._encoder = oe
 
         missing_feats= summary.loc[(summary['missing_count']>0),['feature','nature']]
-        stats_filled_data = self.stats_impute(df,summary)
-        
+        stats_filled_data = self.stats_impute(df_original,summary)
+
+        df_chain = df_original.copy()
         imputed_dataset = stats_filled_data.copy()
         
         for _ in  range(self._iterations):
@@ -92,9 +100,9 @@ class TabImputer:
                 feat = row['feature']
                 nature = row['nature']
 
-                original_null_mask = df[feat].isna()
-                not_null_indexes = df.index[~original_null_mask]
-                null_indexes = df.index[original_null_mask]
+                original_null_mask = df_chain[feat].isna()
+                not_null_indexes = df_chain.index[~original_null_mask]
+                null_indexes = df_chain.index[original_null_mask]
 
                 if null_indexes.empty: continue
 
@@ -118,7 +126,17 @@ class TabImputer:
                     pass
 
         
-        return imputed_dataset
+        final_df = imputed_dataset.copy()
     
+        if categorical_features and self._encoder:
+            try:
+                if hasattr(self._encoder, 'categories_'):
+                    final_df[categorical_features] = self._encoder.inverse_transform(final_df[categorical_features])
+            except:
+                print("Warning: Could not inverse transform categorical features. Keeping encoded values.")
+                pass
+
+
+        return final_df
 
 

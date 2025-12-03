@@ -101,7 +101,11 @@ def get_quick_summary( dataset : pd.DataFrame,\
     else:
         raise ValueError('Dataset cannot be empty! Please pass a valid dataset.')
 
-def get_summary_plots(dataset : pd.DataFrame, *, max_dim : int = 12, sample_frac : float = 0.5) -> None:
+def get_summary_plots(dataset : pd.DataFrame, \
+                      *, 
+                      max_dim : int = 12, \
+                      sample_frac : float = 0.5,\
+                      **kwargs) -> None:
    
     """
     Usage
@@ -123,7 +127,7 @@ def get_summary_plots(dataset : pd.DataFrame, *, max_dim : int = 12, sample_frac
     sns.set(style="whitegrid")
 
     dataset_sample = dataset.sample(frac=sample_frac).reset_index(drop=True)
-    _summary = get_quick_summary(dataset_sample,classify=True)
+    _summary = get_quick_summary(dataset_sample,classify=True,**kwargs)
 
     temp_missing = _summary.loc[_summary['missing_percentage'] != 0,['feature', 'missing_count', 'missing_percentage']].sort_values(by='missing_percentage')
 
