@@ -13,7 +13,7 @@ from typing import Tuple
 
 def get_quick_summary( dataset : pd.DataFrame,\
                       *,
-                      unique_ratio : float = 0.002,
+                      unique_ratio : float = 0.00005,
                       distrib_range : Tuple[float,float] = (-0.3,0.3),
                       kurt_range : Tuple[float,float]= (2.5,3.5),
                       classify : bool = False,

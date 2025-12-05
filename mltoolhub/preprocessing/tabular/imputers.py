@@ -7,11 +7,10 @@ from tqdm import tqdm
 import warnings
 warnings.filterwarnings('ignore')
 
-
 import lightgbm as lgb
-from basics import get_quick_summary
 from sklearn.preprocessing import  OrdinalEncoder
 
+from ...basics import get_quick_summary
 
 
 class TabImputer:

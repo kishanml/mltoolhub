@@ -1,6 +1,6 @@
 [project]
 name = "mltoolhub"
-version = "0.0.10"
+version = "0.0.15"
 authors = [
   { name="Kishan Mishra", email="kishanmldev@gmail.com" },
 ]
@@ -18,7 +18,8 @@ dependencies = [
   "pandas",
   "matplotlib",
   "seaborn",
-  "lightgbm"
+  "lightgbm",
+  "tqdm"
 ]
 
 [tool.setuptools.packages.find]

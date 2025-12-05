@@ -1,1 +1,1 @@
-import mltoolhub.preprocessing.tabular as tabular
+from . import tabular
