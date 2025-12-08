@@ -100,18 +100,10 @@ def configure(
 def _caller_info_() -> str : 
 
     __is_ipykernel__ : bool = 'ipykernel' in sys.modules or 'IPython' in sys.modules
+
     if __is_ipykernel__:
-
-        try:
-            from IPython import get_ipython
-            shell = get_ipython()
-            if shell is not None:
-
-                cell_count = shell.execution_count
-                return f"[Notebook : #{cell_count}] "
-        except ImportError:
-            return "[Notebook] "
         
+        return "[Notebook] "
 
     try: 
         cur_frame = inspect.stack()[-1]
@@ -167,7 +159,7 @@ def log_error(*message: Any) -> None:
     if __logger__ is not None:
         _log_msg_(__logger__.error, *message)
 
-def log_critical(*message: Any) -> None:
+def log_insights(*message: Any) -> None:
     """Logs a CRITICAL level message."""
     global __logger__
     if __logger__ is not None:
@@ -175,7 +167,7 @@ def log_critical(*message: Any) -> None:
 
 
 
-## trace all decorator
+## decorators
 
 def trace_errors():
 
