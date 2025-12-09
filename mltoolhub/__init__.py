@@ -11,8 +11,9 @@ except metadata.PackageNotFoundError:
 
 
 # Basic utils 
-from .basics import get_quick_summary, get_summary_plots
+from .basics import get_quick_summary, get_summary_plots,seed_everything
 from . import prologger as prologger
 from . import preprocessing as preprocessing
 
-__all__ = ['get_quick_summary', 'get_summary_plots', 'prologger', 'preprocessing', '__version__']
+__all__ = ['get_quick_summary', 'get_summary_plots', 'seed_everything',
+           'prologger', 'preprocessing', '__version__']

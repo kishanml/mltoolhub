@@ -43,7 +43,7 @@ class LevelBasedFormatter(logging.Formatter):
         return f"{color}{formatted}{TERMCOLOR.RESET.value}"
 
 
-__logger__ : logging.Logger = None
+_logger_ : logging.Logger = None
 
 
 
@@ -53,7 +53,7 @@ def configure(
     handler_type : Literal["file", "rotate", None] = None,
     rotation_handler_config : List[Union[float,float]] = [2**13,2**13]):
 
-    global __logger__
+    global _logger_
 
     try:
         if handler_type is not None:
@@ -61,10 +61,10 @@ def configure(
             if log_dir and not os.path.exists(log_dir):
                 os.makedirs(log_dir)
 
-        if __logger__ is None:
+        if _logger_ is None:
 
-            __logger__ = logging.getLogger('root')
-            __logger__.setLevel(logging.DEBUG) 
+            _logger_ = logging.getLogger('root')
+            _logger_.setLevel(logging.DEBUG) 
 
             if handler_type is not None:
 
@@ -79,13 +79,13 @@ def configure(
                 else:
                     raise ValueError('handler_type should be file or rotate.')
                 
-                __logger__.addHandler(fh)
+                _logger_.addHandler(fh)
                 
             ch = logging.StreamHandler()
             ch.setLevel(logging.DEBUG)
             ch.setFormatter(LevelBasedFormatter(log_format))
 
-            __logger__.addHandler(ch)
+            _logger_.addHandler(ch)
             
     
     except Exception as exc : 
@@ -114,7 +114,7 @@ def _caller_info_() -> str :
     
 def _log_msg_(log_func : Callable[[str],None], *message : Any) -> None:
 
-    global __logger__
+    global _logger_
 
     try:
 
@@ -124,7 +124,7 @@ def _log_msg_(log_func : Callable[[str],None], *message : Any) -> None:
         messages[0] = inspect_info + str(messages[0])
         final_message = " ".join(str(msg) for msg in messages)
 
-        if __logger__ is not None:
+        if _logger_ is not None:
             log_func(final_message)
 
     
@@ -137,39 +137,39 @@ def _log_msg_(log_func : Callable[[str],None], *message : Any) -> None:
 
 def log_info(*message: Any) -> None:
     """Logs an INFO level message."""
-    global __logger__
-    if __logger__ is not None:
-        _log_msg_(__logger__.info, *message)
+    global _logger_
+    if _logger_ is not None:
+        _log_msg_(_logger_.info, *message)
 
 def log_warn(*message: Any) -> None:
     """Logs a WARNING level message."""
-    global __logger__
-    if __logger__ is not None:
-        _log_msg_(__logger__.warning, *message)
+    global _logger_
+    if _logger_ is not None:
+        _log_msg_(_logger_.warning, *message)
 
 def log_debug(*message: Any) -> None:
     """Logs a DEBUG level message."""
-    global __logger__
-    if __logger__ is not None:
-        _log_msg_(__logger__.debug, *message)
+    global _logger_
+    if _logger_ is not None:
+        _log_msg_(_logger_.debug, *message)
 
 def log_error(*message: Any) -> None:
     """Logs a ERROR level message."""
-    global __logger__
-    if __logger__ is not None:
-        _log_msg_(__logger__.error, *message)
+    global _logger_
+    if _logger_ is not None:
+        _log_msg_(_logger_.error, *message)
 
 def log_critical(*message: Any) -> None:
     """Logs a CRITICAL level message."""
-    global __logger__
-    if __logger__ is not None:
-        _log_msg_(__logger__.critical, *message)
+    global _logger_
+    if _logger_ is not None:
+        _log_msg_(_logger_.critical, *message)
 
 
 
 ## decorators
 
-def trace_errors():
+def trace_exceptions():
 
     def execute(func):
 
@@ -177,8 +177,8 @@ def trace_errors():
             try:
                 return func(*args, **kwargs)
             except Exception:
-                if __logger__ is not None:
-                    _log_msg_(__logger__.error,"Traceback:\n" + traceback.format_exc())
+                if _logger_ is not None:
+                    _log_msg_(_logger_.error,"Traceback:\n" + traceback.format_exc())
 
         return wrapper
 

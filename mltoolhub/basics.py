@@ -1,19 +1,22 @@
+import os
 import math
 import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
+
+
 import warnings
 warnings.filterwarnings('ignore')
 
-from typing import Tuple
+from typing import Tuple, Optional
 
 # -----------------------------------BASICS-------------------------------------
 
 def get_quick_summary( dataset : pd.DataFrame,\
                       *,
-                      unique_ratio : float = 0.00005,
+                      unique_ratio : float = 1e-5,
                       distrib_range : Tuple[float,float] = (-0.3,0.3),
                       kurt_range : Tuple[float,float]= (2.5,3.5),
                       classify : bool = False,
@@ -229,4 +232,52 @@ def get_summary_plots(dataset : pd.DataFrame, \
                 ax.axis("off")
         fig4.suptitle("Value Counts for Categorical Features", fontsize=16, y=1.02)
         fig4.tight_layout()
+
+def seed_everything( seed : Optional[int] = None ) -> int:
+
+    """
+    Usage
+    -----
+    Sets the random seed for Python, NumPy and PyTorch.
+
+    Parameters
+    ----------
+        seed : int | None = None
+            If seed is None, a new seed is generated using system randomness.
+
+    Returns
+    -------
+        seed : int
+    """
+
+    if seed is None:
+        # Use system entropy for a high-quality, non-deterministic seed
+        seed = int.from_bytes(os.urandom(4),byteorder="big")
+
+    # random lib 
+    import random
+    random.seed(seed)
+
+    # python hashing 
+    os.environ['PYTHONHASHSEED'] = str(seed)
+
+    # numpy 
+    try:
+        import numpy as np
+        np.random.seed(seed)
+    except ImportError:
+        pass
+
+    # torch
+    try:
+        import torch
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed) 
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False 
+    except ImportError:
+        pass
+
+    return seed
 
