@@ -159,7 +159,7 @@ def log_error(*message: Any) -> None:
     if __logger__ is not None:
         _log_msg_(__logger__.error, *message)
 
-def log_insights(*message: Any) -> None:
+def log_critical(*message: Any) -> None:
     """Logs a CRITICAL level message."""
     global __logger__
     if __logger__ is not None:
