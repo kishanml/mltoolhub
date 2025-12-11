@@ -6,7 +6,7 @@ import traceback
 import logging
 from enum import Enum
 import datetime as dt
-from typing import Literal, List, Union, Callable, Any
+from typing import Literal, Callable, Any
 
 
 # -----------------------------------PROLOGGER-------------------------------------
@@ -44,6 +44,7 @@ class LevelBasedFormatter(logging.Formatter):
 
 
 _logger_ : logging.Logger = None
+_is_nb_ : bool = False
 
 
 
@@ -51,9 +52,14 @@ def configure(
     log_filepath: str = f"logs/log_{dt.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log",
     log_format: str = LOG_FORMAT,
     handler_type : Literal["file", "rotate", None] = None,
-    rotation_handler_config : List[Union[float,float]] = [2**13,2**13]):
+    rotation_file_maxBytes : float = 10*(1024**2),
+    rotation_file_backupCount : int = 1000,
+    is_notebook : bool = False):
 
-    global _logger_
+    global _logger_, _is_nb_
+
+    if is_notebook:
+        _is_nb_ = True
 
     try:
         if handler_type is not None:
@@ -73,7 +79,7 @@ def configure(
                     fh.setLevel(logging.DEBUG)
 
                 elif handler_type == "rotate":
-                    fh = logging.handlers.RotatingFileHandler(log_filepath,*rotation_handler_config)
+                    fh = logging.handlers.RotatingFileHandler(log_filepath,maxBytes=rotation_file_maxBytes, backupCount=rotation_file_backupCount)
                     fh.setLevel(logging.DEBUG)
 
                 else:
@@ -92,18 +98,10 @@ def configure(
         raise Exception(f'Error occured while configuring Logger : {exc}\n{traceback.format_exc()}')
     
 
-
-
 ## logger functions 
 ##- Resolves the issue of the decorator path appearing as the error location in standard logging.
 
-def _caller_info_() -> str : 
-
-    __is_ipykernel__ : bool = 'ipykernel' in sys.modules or 'IPython' in sys.modules
-
-    if __is_ipykernel__:
-        
-        return "[Notebook] "
+def _file_caller_info_() -> str : 
 
     try: 
         cur_frame = inspect.stack()[-1]
@@ -114,11 +112,14 @@ def _caller_info_() -> str :
     
 def _log_msg_(log_func : Callable[[str],None], *message : Any) -> None:
 
-    global _logger_
+    global _logger_, _is_nb_
 
     try:
-
-        inspect_info = _caller_info_()
+        if _is_nb_:
+            inspect_info = "[Notebook] "
+            
+        else:
+            inspect_info = _file_caller_info_()
 
         messages = list(message)
         messages[0] = inspect_info + str(messages[0])
